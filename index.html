@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resiter Perú — Control de Flota</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     APP SHELL
+══════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">R</div>
+      <div class="brand-text">
+        <span class="brand-name">Resiter Perú</span>
+        <span class="brand-sub">Control de Flota</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <span class="nav-group-label">Principal</span>
+        <button class="nav-item active" data-tab="dashboard">
+          <span class="nav-icon">📊</span> Dashboard
+        </button>
+        <button class="nav-item" data-tab="odometro">
+          <span class="nav-icon">📷</span> Odómetro
+        </button>
+        <button class="nav-item" data-tab="abastec">
+          <span class="nav-icon">⛽</span> Abastecimiento
+        </button>
+        <button class="nav-item" data-tab="historial">
+          <span class="nav-icon">📋</span> Historial
+        </button>
+      </div>
+      <div class="nav-group">
+        <span class="nav-group-label">Flota</span>
+        <button class="nav-item" data-tab="maestro">
+          <span class="nav-icon">🚛</span> Maestro de unidades
+        </button>
+        <button class="nav-item" data-tab="conductores">
+          <span class="nav-icon">👤</span> Conductores
+        </button>
+        <button class="nav-item" data-tab="mantenimiento">
+          <span class="nav-icon">🔧</span> Mantenimiento
+        </button>
+        <button class="nav-item" data-tab="documentos">
+          <span class="nav-icon">📂</span> Documentos
+        </button>
+      </div>
+      <div class="nav-group">
+        <span class="nav-group-label">Operaciones</span>
+        <button class="nav-item" data-tab="rutas">
+          <span class="nav-icon">🗺️</span> Rutas y viajes
+        </button>
+        <button class="nav-item" data-tab="zonas">
+          <span class="nav-icon">📍</span> Zonas / CECO
+        </button>
+      </div>
+      <div class="nav-group">
+        <span class="nav-group-label">Análisis</span>
+        <button class="nav-item" data-tab="comparativo">
+          <span class="nav-icon">📈</span> Comparativo
+        </button>
+        <button class="nav-item" data-tab="reportes">
+          <span class="nav-icon">📄</span> Reportes
+        </button>
+        <button class="nav-item" data-tab="ia">
+          <span class="nav-icon">✨</span> Asistente IA
+          <span class="nav-badge">Claude</span>
+        </button>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-clock" id="sidebarClock"></div>
+      <div class="sidebar-version">v1.0 · Supervisor M&C</div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main id="main">
+
+    <!-- TOP BAR -->
+    <header id="topbar">
+      <button id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-actions">
+        <div class="alerts-bell" onclick="goTab('mantenimiento')" title="Alertas activas">
+          🔔 <span id="alertCount" class="alert-dot">0</span>
+        </div>
+        <div class="topbar-user">Supervisor M&C</div>
+      </div>
+    </header>
+
+    <!-- METRICS BAR -->
+    <div id="metricsBar" class="metrics-bar"></div>
+
+    <!-- TAB CONTENT AREA -->
+    <div id="tabArea">
+
+      <!-- ═══ DASHBOARD ═══ -->
+      <div class="tab-c active" id="tab-c-dashboard">
+        <div class="page-header">
+          <h1>Dashboard general</h1>
+          <p>Resumen en tiempo real del estado de la flota</p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">📈 Rendimiento por unidad</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+              <select id="dash-div" onchange="renderDash()" class="sel-sm">
+                <option value="">Todas las divisiones</option>
+                <option>Administracion</option><option>Aguas</option><option>Hidro carburos</option><option>Industrial</option><option>Mineria</option>
+              </select>
+              <select id="dash-ceco" onchange="renderDash()" class="sel-sm">
+                <option value="">Todos los CECOs</option>
+              </select>
+            </div>
+            <div class="table-wrap" style="max-height:300px;overflow-y:auto">
+              <table><thead><tr><th>Placa</th><th>Marca</th><th>División</th><th>CECO</th><th>KM</th><th>Rendimiento</th><th>Estado</th><th>Conductor</th></tr></thead>
+              <tbody id="dash-body"></tbody></table>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🔔 Alertas activas</div>
+            <div id="dash-alertas" style="max-height:320px;overflow-y:auto"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">📉 Tendencia de rendimiento — últimos registros</div>
+          <div style="height:200px;position:relative"><canvas id="trendChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ═══ ODÓMETRO ═══ -->
+      <div class="tab-c" id="tab-c-odometro">
+        <div class="page-header">
+          <h1>Registro de odómetro</h1>
+          <p>Captura con foto — lectura automática y validación manual</p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">📷 Captura de lectura</div>
+            <div class="fg" id="odo-form">
+              <div class="field"><label>Unidad (placa)</label><select id="odo-placa" onchange="fillUIC('odo')"><option value="">— seleccionar —</option></select></div>
+              <div class="field"><label>Conductor</label><input type="text" id="odo-conductor" placeholder="Nombre del conductor"></div>
+              <div class="field"><label>Fecha y hora</label><input type="datetime-local" id="odo-fecha"></div>
+              <div class="field"><label>Tipo de evento</label>
+                <select id="odo-tipo"><option>Inicio de ruta</option><option>Fin de ruta</option><option>Control intermedio</option></select>
+              </div>
+            </div>
+            <div class="uic" id="odo-uic" style="display:none">
+              <div class="uic-row"><span class="uic-lbl">🏢 División</span><span class="uic-val" id="odo-uif-div">—</span></div>
+              <div class="uic-row"><span class="uic-lbl">📍 CECO</span><span class="uic-val" id="odo-uif-ceco">—</span></div>
+              <div class="uic-row"><span class="uic-lbl">🚛 Marca/Año</span><span class="uic-val" id="odo-uif-marca">—</span></div>
+              <div class="uic-row"><span class="uic-lbl">⛽ Combustible</span><span class="uic-val" id="odo-uif-comb">—</span></div>
+              <div class="uic-row"><span class="uic-lbl">📡 GPS</span><span class="uic-val" id="odo-uif-gps">—</span></div>
+              <div class="uic-row"><span class="uic-lbl">📏 Último KM</span><span class="uic-val" id="odo-uif-km">—</span></div>
+            </div>
+            <div class="drop-zone" id="odo-zone">
+              <div class="drop-icon">📷</div>
+              <p class="drop-text">Abre la cámara o sube una imagen del odómetro</p>
+              <p class="drop-sub">El sistema detecta el número automáticamente</p>
+              <input type="file" id="odo-cam" accept="image/*" capture="environment" onchange="processOdo(event)">
+              <input type="file" id="odo-file" accept="image/*" onchange="processOdo(event)">
+              <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+                <button class="btn primary" onclick="document.getElementById('odo-cam').click()">📷 Abrir cámara</button>
+                <button class="btn" onclick="document.getElementById('odo-file').click()">📁 Subir imagen</button>
+              </div>
+            </div>
+            <img id="odo-preview" class="img-preview" alt="Preview odómetro">
+            <div id="odo-confirm" class="confirm-box" style="display:none">
+              <p class="confirm-label">🤖 Lectura detectada — verifica y corrige si es necesario:</p>
+              <div class="km-input-row">
+                <input type="number" id="odo-km" class="km-input" placeholder="KM leídos">
+                <span id="odo-conf-badge" class="badge b-ok"></span>
+                <span id="odo-km-diff" class="km-diff"></span>
+              </div>
+              <div class="btn-row" style="margin-top:10px">
+                <button class="btn success" onclick="confirmOdo()">✅ Confirmar y guardar</button>
+                <button class="btn" onclick="clearOdo()">✕ Cancelar</button>
+              </div>
+            </div>
+            <div id="odo-result" style="display:none;margin-top:8px"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">📋 Últimas lecturas registradas</div>
+            <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+              <table><thead><tr><th>Fecha</th><th>Placa</th><th>KM</th><th>Evento</th><th>Conductor</th></tr></thead>
+              <tbody id="odo-recent"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ ABASTECIMIENTO ═══ -->
+      <div class="tab-c" id="tab-c-abastec">
+        <div class="page-header">
+          <h1>Registro de abastecimiento</h1>
+          <p>Manual o carga masiva desde Excel/CSV</p>
+        </div>
+        <div class="pill-row">
+          <button class="pill active" onclick="switchFuelTab('manual')" id="pill-manual">📝 Manual</button>
+          <button class="pill" onclick="switchFuelTab('excel')" id="pill-excel">📊 Excel / CSV</button>
+        </div>
+        <div id="fuel-manual">
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-title">⛽ Nuevo abastecimiento</div>
+              <div class="fg">
+                <div class="field"><label>Unidad (placa)</label><select id="fuel-placa" onchange="fillUIC('fuel');calcRend()"><option value="">— seleccionar —</option></select></div>
+                <div class="field"><label>Fecha</label><input type="date" id="fuel-fecha"></div>
+                <div class="field"><label>KM en odómetro</label><input type="number" id="fuel-km" placeholder="KM actual" oninput="calcRend()"></div>
+                <div class="field"><label>Galones</label><input type="number" id="fuel-gal" placeholder="0.00" step="0.01" oninput="calcRend()"></div>
+                <div class="field"><label>Precio/gal (S/.)</label><input type="number" id="fuel-precio" placeholder="0.00" step="0.01" oninput="calcRend()"></div>
+                <div class="field"><label>Grifo / estación</label><input type="text" id="fuel-grifo" placeholder="Nombre del grifo"></div>
+              </div>
+              <div class="uic" id="fuel-uic" style="display:none">
+                <div class="uic-row"><span class="uic-lbl">🏢 División</span><span class="uic-val" id="fuel-uif-div">—</span></div>
+                <div class="uic-row"><span class="uic-lbl">📍 CECO</span><span class="uic-val" id="fuel-uif-ceco">—</span></div>
+                <div class="uic-row"><span class="uic-lbl">🚛 Marca/Año</span><span class="uic-val" id="fuel-uif-marca">—</span></div>
+                <div class="uic-row"><span class="uic-lbl">⛽ Combustible</span><span class="uic-val" id="fuel-uif-comb">—</span></div>
+                <div class="uic-row"><span class="uic-lbl">📏 Último KM</span><span class="uic-val" id="fuel-uif-km">—</span></div>
+                <div class="uic-row"><span class="uic-lbl">📊 Rend. previo</span><span class="uic-val" id="fuel-uif-rend">—</span></div>
+              </div>
+              <div class="lc-box" id="fuel-lc" style="display:none">
+                <div class="lc-grid">
+                  <div><div class="lc-lbl">KM recorridos</div><div class="lc-val" id="lc-km">—</div></div>
+                  <div><div class="lc-lbl">Rendimiento</div><div class="lc-val" id="lc-rend">—</div></div>
+                  <div><div class="lc-lbl">Total S/.</div><div class="lc-val" id="lc-total">—</div></div>
+                  <div><div class="lc-lbl">S/. por km</div><div class="lc-val" id="lc-pkm">—</div></div>
+                </div>
+                <div id="lc-alert"></div>
+              </div>
+              <button class="btn primary" onclick="saveFuel()">💾 Guardar abastecimiento</button>
+            </div>
+            <div class="card">
+              <div class="card-title">📋 Últimos abastecimientos</div>
+              <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+                <table><thead><tr><th>Fecha</th><th>Placa</th><th>CECO</th><th>Galones</th><th>Rendimiento</th><th>Total</th></tr></thead>
+                <tbody id="fuel-recent"></tbody></table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="fuel-excel" style="display:none">
+          <div class="card">
+            <div class="card-title">📊 Carga masiva Excel / CSV</div>
+            <div class="al al-info" style="margin-bottom:12px">
+              <span>ℹ️</span><span>Formato requerido: <strong>Fecha | Placa | Galones | Precio/gal | Grifo | KM odómetro</strong>. La División y CECO se asignan automáticamente del maestro por placa.</span>
+            </div>
+            <label class="drop-zone" for="excel-inp" style="cursor:pointer">
+              <div class="drop-icon">📂</div>
+              <p class="drop-text">Arrastra tu archivo o haz clic para seleccionar</p>
+              <p class="drop-sub">.xlsx, .xls, .csv aceptados</p>
+              <input type="file" id="excel-inp" accept=".xlsx,.xls,.csv" onchange="processExcel()">
+            </label>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+              <button class="btn primary" onclick="downloadTemplate()">⬇️ Descargar plantilla</button>
+              <button class="btn" onclick="loadDemoExcel()">▶️ Cargar datos demo</button>
+            </div>
+            <div id="excel-preview" style="display:none;margin-top:16px">
+              <div class="card-title">Vista previa — <span id="excel-count">0</span> registros</div>
+              <div class="table-wrap" style="max-height:240px;overflow-y:auto">
+                <table><thead><tr><th>Fecha</th><th>Placa</th><th>División</th><th>CECO</th><th>Galones</th><th>Precio</th><th>Grifo</th><th>KM</th><th>Rendimiento</th><th>Estado</th></tr></thead>
+                <tbody id="excel-body"></tbody></table>
+              </div>
+              <div class="btn-row" style="margin-top:10px">
+                <button class="btn success" onclick="importExcel()">✅ Importar registros</button>
+                <button class="btn" onclick="cancelExcel()">✕ Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ HISTORIAL ═══ -->
+      <div class="tab-c" id="tab-c-historial">
+        <div class="page-header">
+          <h1>Historial de registros</h1>
+          <p>Todos los movimientos de odómetro y abastecimiento</p>
+        </div>
+        <div class="card">
+          <div class="toolbar">
+            <input type="text" id="hist-q" placeholder="🔍 Buscar placa, CECO, conductor..." oninput="renderHist()" class="search-input">
+            <select id="hist-div" onchange="renderHist()" class="sel-sm">
+              <option value="">Todas las divisiones</option>
+              <option>Administracion</option><option>Aguas</option><option>Hidro carburos</option><option>Industrial</option><option>Mineria</option>
+            </select>
+            <select id="hist-tipo" onchange="renderHist()" class="sel-sm">
+              <option value="">Todos los tipos</option><option value="km">Odómetro</option><option value="fuel">Abastecimiento</option>
+            </select>
+            <span id="hist-cnt" class="count-label"></span>
+            <button class="btn sm" onclick="exportHistCSV()" style="margin-left:auto">⬇️ Exportar CSV</button>
+          </div>
+          <div class="table-wrap" style="max-height:500px;overflow-y:auto">
+            <table><thead><tr><th>Fecha</th><th>Tipo</th><th>Placa</th><th>División</th><th>CECO</th><th>Conductor</th><th>KM</th><th>Galones</th><th>Rendimiento</th><th>S/. Total</th><th>Válido</th></tr></thead>
+            <tbody id="hist-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MAESTRO ═══ -->
+      <div class="tab-c" id="tab-c-maestro">
+        <div class="page-header">
+          <h1>Maestro de unidades</h1>
+          <p>181 unidades — División y CECO editables con historial de reasignaciones</p>
+        </div>
+        <div class="card">
+          <div class="toolbar">
+            <input type="text" id="maes-q" placeholder="🔍 Buscar placa, marca, CECO..." oninput="renderMaestro()" class="search-input">
+            <select id="maes-div" onchange="renderMaestro()" class="sel-sm">
+              <option value="">Todas las divisiones</option>
+              <option>Administracion</option><option>Aguas</option><option>Hidro carburos</option><option>Industrial</option><option>Mineria</option>
+            </select>
+            <select id="maes-est" onchange="renderMaestro()" class="sel-sm">
+              <option value="">Todos los estados</option><option>EN USO</option><option>EN REPARACION</option><option>COMISARIA</option><option>POR ENTREGAR</option>
+            </select>
+            <span id="maes-cnt" class="count-label"></span>
+            <button class="btn sm" onclick="exportMaestroCSV()" style="margin-left:auto">⬇️ Exportar</button>
+          </div>
+          <div class="table-wrap" style="max-height:500px;overflow-y:auto">
+            <table style="min-width:780px"><thead><tr><th>#</th><th>Placa</th><th>Marca</th><th>Año</th><th>Comb.</th><th>GPS</th><th>Estado</th><th>División</th><th>CECO</th><th>Historial</th><th>Acción</th></tr></thead>
+            <tbody id="maes-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ CONDUCTORES ═══ -->
+      <div class="tab-c" id="tab-c-conductores">
+        <div class="page-header">
+          <h1>Gestión de conductores</h1>
+          <p>Registro, asignación de unidades y control de licencias</p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">👤 Registrar conductor</div>
+            <div class="fg">
+              <div class="field"><label>Nombre completo</label><input type="text" id="drv-nom" placeholder="Apellidos, Nombre"></div>
+              <div class="field"><label>DNI</label><input type="text" id="drv-dni" placeholder="12345678" maxlength="8"></div>
+              <div class="field"><label>Categoría licencia</label><input type="text" id="drv-lic" placeholder="A-IIb, A-IIIb..."></div>
+              <div class="field"><label>Vencimiento licencia</label><input type="date" id="drv-venc"></div>
+              <div class="field"><label>Teléfono</label><input type="text" id="drv-tel" placeholder="9xx xxx xxx"></div>
+              <div class="field"><label>División</label>
+                <select id="drv-div"><option value="">— seleccionar —</option><option>Administracion</option><option>Aguas</option><option>Hidro carburos</option><option>Industrial</option><option>Mineria</option></select>
+              </div>
+              <div class="field"><label>Unidad asignada</label><select id="drv-unidad"><option value="">— sin asignar —</option></select></div>
+              <div class="field"><label>Estado</label>
+                <select id="drv-estado"><option>Activo</option><option>Vacaciones</option><option>Descanso médico</option><option>Inactivo</option></select>
+              </div>
+            </div>
+            <button class="btn primary" onclick="saveConductor()">➕ Registrar conductor</button>
+          </div>
+          <div class="card">
+            <div class="card-title">👥 Conductores registrados</div>
+            <div class="toolbar" style="margin-bottom:10px">
+              <input type="text" id="drv-q" placeholder="🔍 Nombre, DNI..." oninput="renderConductores()" class="search-input">
+              <select id="drv-fest" onchange="renderConductores()" class="sel-sm">
+                <option value="">Todos</option><option>Activo</option><option>Vacaciones</option><option>Descanso médico</option><option>Inactivo</option>
+              </select>
+              <button class="btn sm" onclick="exportDrvCSV()">⬇️</button>
+            </div>
+            <div class="table-wrap" style="max-height:340px;overflow-y:auto">
+              <table><thead><tr><th>Nombre</th><th>DNI</th><th>Lic.</th><th>Venc.</th><th>Unidad</th><th>Estado</th><th></th></tr></thead>
+              <tbody id="drv-body"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MANTENIMIENTO ═══ -->
+      <div class="tab-c" id="tab-c-mantenimiento">
+        <div class="page-header">
+          <h1>Control de mantenimiento</h1>
+          <p>Programación y seguimiento por KM y fechas</p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">🔧 Programar mantenimiento</div>
+            <div class="fg">
+              <div class="field"><label>Unidad (placa)</label><select id="mnt-placa" onchange="fillMntInfo()"><option value="">— seleccionar —</option></select></div>
+              <div class="field"><label>Tipo</label>
+                <select id="mnt-tipo"><option>Cambio de aceite</option><option>Cambio de filtros</option><option>Revisión de frenos</option><option>Cambio de llantas</option><option>Mantenimiento preventivo</option><option>Mantenimiento correctivo</option><option>Revisión técnica</option><option>SOAT</option><option>Otro</option></select>
+              </div>
+              <div class="field"><label>KM actual</label><input type="number" id="mnt-km-act" placeholder="KM odómetro"></div>
+              <div class="field"><label>KM próximo mant.</label><input type="number" id="mnt-km-prox" placeholder="Ej: 125000"></div>
+              <div class="field"><label>Fecha programada</label><input type="date" id="mnt-fecha"></div>
+              <div class="field"><label>Taller / responsable</label><input type="text" id="mnt-taller" placeholder="Nombre del taller"></div>
+              <div class="field"><label>Costo estimado (S/.)</label><input type="number" id="mnt-costo" placeholder="0.00" step="0.01"></div>
+              <div class="field"><label>Observaciones</label><input type="text" id="mnt-obs" placeholder="Notas adicionales"></div>
+            </div>
+            <div id="mnt-uic" style="display:none;background:var(--bg2);border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;border:1px solid var(--border)"></div>
+            <button class="btn primary" onclick="saveMnt()">📅 Programar</button>
+          </div>
+          <div class="card">
+            <div class="card-title">📋 Estado de mantenimientos</div>
+            <div class="toolbar" style="margin-bottom:10px">
+              <select id="mnt-fdiv" onchange="renderMnt()" class="sel-sm">
+                <option value="">Todas las divisiones</option><option>Administracion</option><option>Aguas</option><option>Hidro carburos</option><option>Industrial</option><option>Mineria</option>
+              </select>
+              <select id="mnt-fest" onchange="renderMnt()" class="sel-sm">
+                <option value="">Todos</option><option value="ok">Al día</option><option value="prox">Próximo</option><option value="venc">Vencido</option>
+              </select>
+            </div>
+            <div class="table-wrap" style="max-height:360px;overflow-y:auto">
+              <table style="min-width:600px"><thead><tr><th>Placa</th><th>División</th><th>Tipo</th><th>KM actual</th><th>Próx. KM</th><th>Fecha</th><th>Progreso</th><th>Estado</th><th></th></tr></thead>
+              <tbody id="mnt-body"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ DOCUMENTOS ═══ -->
+      <div class="tab-c" id="tab-c-documentos">
+        <div class="page-header">
+          <h1>Control de documentos</h1>
+          <p>SOAT, revisión técnica, pólizas y permisos con alertas de vencimiento</p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">📋 Registrar documento</div>
+            <div class="fg">
+              <div class="field"><label>Unidad (placa)</label><select id="doc-placa"><option value="">— seleccionar —</option></select></div>
+              <div class="field"><label>Tipo de documento</label>
+                <select id="doc-tipo"><option>SOAT</option><option>Revisión técnica</option><option>Póliza de seguro</option><option>Tarjeta de propiedad</option><option>Permiso de operación</option><option>Certificado de pesaje</option><option>Licencia especial</option><option>Otro</option></select>
+              </div>
+              <div class="field"><label>Número de documento</label><input type="text" id="doc-numero" placeholder="Nro. o código"></div>
+              <div class="field"><label>Fecha de emisión</label><input type="date" id="doc-emision"></div>
+              <div class="field"><label>Fecha de vencimiento</label><input type="date" id="doc-venc"></div>
+              <div class="field"><label>Entidad emisora</label><input type="text" id="doc-entidad" placeholder="Ej: MTC, Rimac, SUNARP"></div>
+              <div class="field"><label>Costo (S/.)</label><input type="number" id="doc-costo" placeholder="0.00" step="0.01"></div>
+              <div class="field"><label>Observaciones</label><input type="text" id="doc-obs" placeholder="Notas"></div>
+            </div>
+            <div class="btn-row">
+              <button class="btn primary" onclick="saveDoc()">💾 Registrar</button>
+              <button class="btn" onclick="loadDemoDocs()">▶️ Demo</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🔔 Próximos a vencer (60 días)</div>
+            <div id="docs-alertas" style="max-height:360px;overflow-y:auto"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">📂 Todos los documentos</div>
+          <div class="toolbar" style="margin-bottom:10px">
+            <input type="text" id="doc-q" placeholder="🔍 Buscar placa, tipo..." oninput="renderDocs()" class="search-input">
+            <select id="doc-ftipo" onchange="renderDocs()" class="sel-sm">
+              <option value="">Todos los tipos</option>
+              <option>SOAT</option><option>Revisión técnica</option><option>Póliza de seguro</option><option>Tarjeta de propiedad</option><option>Permiso de operación</option>
+            </select>
+            <select id="doc-fest" onchange="renderDocs()" class="sel-sm">
+              <option value="">Todos</option><option value="ok">Vigente</option><option value="prox">Por vencer</option><option value="venc">Vencido</option>
+            </select>
+            <button class="btn sm" onclick="exportDocsCSV()" style="margin-left:auto">⬇️ Exportar</button>
+          </div>
+          <div class="table-wrap" style="max-height:340px;overflow-y:auto">
+            <table><thead><tr><th>Placa</th><th>División</th><th>CECO</th><th>Tipo</th><th>Número</th><th>Vencimiento</th><th>Días restantes</th><th>Entidad</th><th>Costo S/.</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="docs-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ RUTAS ═══ -->
+      <div class="tab-c" id="tab-c-rutas">
+        <div class="page-header">
+          <h1>Rutas y viajes</h1>
+          <p>Control de KM programados vs reales por viaje</p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">🚀 Registrar viaje</div>
+            <div class="fg">
+              <div class="field"><label>Unidad (placa)</label><select id="ruta-placa" onchange="fillRutaInfo()"><option value="">— seleccionar —</option></select></div>
+              <div class="field"><label>Conductor</label><select id="ruta-conductor"><option value="">— seleccionar —</option></select></div>
+              <div class="field"><label>Origen</label><input type="text" id="ruta-origen" placeholder="Ciudad / punto de partida"></div>
+              <div class="field"><label>Destino / CECO</label><select id="ruta-destino"><option value="">— seleccionar —</option></select></div>
+              <div class="field"><label>Fecha salida</label><input type="datetime-local" id="ruta-salida"></div>
+              <div class="field"><label>KM inicial (odómetro)</label><input type="number" id="ruta-km-ini" placeholder="KM partida"></div>
+              <div class="field"><label>KM programados</label><input type="number" id="ruta-km-prog" placeholder="KM estimados"></div>
+              <div class="field"><label>Tipo de carga</label>
+                <select id="ruta-carga"><option>Residuos sólidos</option><option>Residuos peligrosos</option><option>Materiales</option><option>Personal</option><option>Equipos</option><option>Vacío</option><option>Otro</option></select>
+              </div>
+              <div class="field"><label>Observaciones</label><input type="text" id="ruta-obs" placeholder="Notas del viaje"></div>
+            </div>
+            <div id="ruta-uic" style="display:none;background:var(--bg2);border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px;border:1px solid var(--border)"></div>
+            <div class="btn-row">
+              <button class="btn primary" onclick="saveRuta()">🚀 Iniciar viaje</button>
+              <button class="btn" onclick="loadDemoRutas()">▶️ Demo</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">🟢 Viajes activos</div>
+            <div id="viajes-activos" style="max-height:360px;overflow-y:auto"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">📋 Historial de rutas</div>
+          <div class="toolbar" style="margin-bottom:10px">
+            <input type="text" id="ruta-q" placeholder="🔍 Buscar placa, destino..." oninput="renderRutas()" class="search-input">
+            <select id="ruta-fest" onchange="renderRutas()" class="sel-sm">
+              <option value="">Todos</option><option>En ruta</option><option>Completado</option><option>Cancelado</option>
+            </select>
+            <button class="btn sm" onclick="exportRutasCSV()" style="margin-left:auto">⬇️ Exportar</button>
+          </div>
+          <div class="table-wrap" style="max-height:320px;overflow-y:auto">
+            <table style="min-width:860px"><thead><tr><th>#</th><th>Placa</th><th>División</th><th>Conductor</th><th>Origen</th><th>Destino</th><th>Salida</th><th>KM prog.</th><th>KM real</th><th>Variación</th><th>Carga</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="rutas-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ ZONAS ═══ -->
+      <div class="tab-c" id="tab-c-zonas">
+        <div class="page-header">
+          <h1>Zonas / CECO</h1>
+          <p>Distribución de flota por zona geográfica y centro de costo</p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">📍 Distribución por CECO</div>
+            <div class="pill-row" id="zona-pills"></div>
+            <div id="zona-grid" class="zone-grid"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">🍩 Por División</div>
+            <div style="height:220px;position:relative"><canvas id="divChart"></canvas></div>
+          </div>
+        </div>
+        <div class="card" id="zona-det" style="margin-top:12px;display:none">
+          <div class="card-title" id="zona-det-title">Detalle</div>
+          <div class="table-wrap" style="max-height:280px;overflow-y:auto">
+            <table><thead><tr><th>#</th><th>Placa</th><th>Marca</th><th>Año</th><th>GPS</th><th>Estado</th><th>Comb.</th><th>Conductor</th></tr></thead>
+            <tbody id="zona-det-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ COMPARATIVO ═══ -->
+      <div class="tab-c" id="tab-c-comparativo">
+        <div class="page-header">
+          <h1>Análisis comparativo</h1>
+          <p>Rendimiento agrupado por marca, división, CECO, año, GPS o combustible</p>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 Comparativo de rendimiento km/gal</div>
+          <div class="pill-row">
+            <button class="pill active" onclick="switchComp('marca',this)">Por marca</button>
+            <button class="pill" onclick="switchComp('division',this)">Por división</button>
+            <button class="pill" onclick="switchComp('ceco',this)">Por CECO</button>
+            <button class="pill" onclick="switchComp('anio',this)">Por año</button>
+            <button class="pill" onclick="switchComp('gps',this)">Por GPS</button>
+            <button class="pill" onclick="switchComp('comb',this)">Por combustible</button>
+          </div>
+          <div id="comp-bars"></div>
+        </div>
+        <div class="grid-2" style="margin-top:12px">
+          <div class="card">
+            <div class="card-title">🥇 Top 10 mejor rendimiento</div>
+            <div id="rank-best"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">⚠️ Top 10 menor rendimiento</div>
+            <div id="rank-worst"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <div class="card-title">📉 Eficiencia por tipo de combustible</div>
+          <div style="height:200px;position:relative"><canvas id="compChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ═══ REPORTES ═══ -->
+      <div class="tab-c" id="tab-c-reportes">
+        <div class="page-header">
+          <h1>Generador de reportes</h1>
+          <p>Exporta en CSV o descarga reporte ejecutivo en texto</p>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">⚙️ Configurar reporte</div>
+            <div class="fg">
+              <div class="field"><label>Tipo de reporte</label>
+                <select id="pdf-tipo" onchange="buildPDF()">
+                  <option value="ejecutivo">Resumen ejecutivo de flota</option>
+                  <option value="rendimiento">Rendimiento por unidad</option>
+                  <option value="documentos">Control de documentos</option>
+                  <option value="rutas">Historial de rutas</option>
+                  <option value="mantenimiento">Estado de mantenimiento</option>
+                </select>
+              </div>
+              <div class="field"><label>División</label>
+                <select id="pdf-div" onchange="buildPDF()">
+                  <option value="">Todas</option><option>Administracion</option><option>Aguas</option><option>Hidro carburos</option><option>Industrial</option><option>Mineria</option>
+                </select>
+              </div>
+              <div class="field"><label>Período inicio</label><input type="date" id="pdf-ini" onchange="buildPDF()"></div>
+              <div class="field"><label>Período fin</label><input type="date" id="pdf-fin" onchange="buildPDF()"></div>
+              <div class="field" style="grid-column:1/-1"><label>Preparado por</label><input type="text" id="pdf-autor" value="Supervisor Monitoreo y Control" onchange="buildPDF()"></div>
+            </div>
+            <div class="btn-row">
+              <button class="btn primary" onclick="downloadPDF()">⬇️ Descargar reporte</button>
+              <button class="btn" onclick="exportRptCSV()">📊 Exportar CSV</button>
+              <button class="btn" onclick="copyReport()">📋 Copiar texto</button>
+              <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">👁️ Vista previa del reporte</div>
+            <pre class="pdf-preview" id="pdf-preview">Configura los parámetros para ver la vista previa.</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ ASISTENTE IA ═══ -->
+      <div class="tab-c" id="tab-c-ia">
+        <div class="page-header">
+          <h1>Asistente IA ✨</h1>
+          <p>Análisis inteligente de flota — powered by Claude</p>
+        </div>
+        <div class="card">
+          <div class="card-title">Preguntas rápidas</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+            <button class="btn sm" onclick="quickIA('¿Cuáles son las unidades con peor rendimiento y qué acciones recomiendas?')">📉 Peor rendimiento</button>
+            <button class="btn sm" onclick="quickIA('Dame un resumen ejecutivo del estado actual de la flota de Resiter Perú')">📋 Resumen ejecutivo</button>
+            <button class="btn sm" onclick="quickIA('¿Qué unidades necesitan mantenimiento urgente según los datos cargados?')">🔧 Mantenimiento urgente</button>
+            <button class="btn sm" onclick="quickIA('Analiza el consumo por División y CECO y dame recomendaciones para reducir costos de combustible')">⛽ Análisis por CECO</button>
+            <button class="btn sm" onclick="quickIA('¿Qué conductores tienen licencia próxima a vencer y qué pasos debo seguir?')">🪪 Licencias por vencer</button>
+            <button class="btn sm" onclick="quickIA('¿Cuál es la marca de vehículo con mejor rendimiento en mi flota y por qué?')">🏎️ Mejor marca</button>
+            <button class="btn sm" onclick="quickIA('¿Qué KPIs debo monitorear diariamente como supervisor de monitoreo y control?')">📈 KPIs clave</button>
+            <button class="btn sm" onclick="quickIA('¿Cómo puedo reducir el consumo de combustible en la División Industrial?')">💡 Reducir consumo</button>
+          </div>
+          <div class="ia-chat" id="ia-chat">
+            <div class="ia-bubble ia-bot">👋 Hola, soy tu asistente de flota Resiter Perú. Tengo acceso a los datos de las 181 unidades, conductores, mantenimientos, documentos y rutas. ¿En qué te puedo ayudar hoy?</div>
+          </div>
+          <div class="ia-input-row">
+            <input type="text" id="ia-inp" placeholder="Escribe tu consulta..." class="ia-input" onkeydown="if(event.key==='Enter'&&!event.shiftKey)sendIA()">
+            <button class="btn primary" id="ia-btn" onclick="sendIA()">📤 Enviar</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end tabArea -->
+  </main>
+</div><!-- end app -->
+
+<!-- MODALS -->
+<div class="modal-bg" id="modal-hist">
+  <div class="modal">
+    <div class="modal-title"><span id="mh-title">Historial</span><button class="btn sm" onclick="closeModal('modal-hist')">✕</button></div>
+    <div id="mh-body"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-drv">
+  <div class="modal">
+    <div class="modal-title"><span id="md-title">Editar conductor</span><button class="btn sm" onclick="closeModal('modal-drv')">✕</button></div>
+    <div id="md-body"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-viaje">
+  <div class="modal">
+    <div class="modal-title"><span id="mv-title">Detalle viaje</span><button class="btn sm" onclick="closeModal('modal-viaje')">✕</button></div>
+    <div id="mv-body"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toastEl"><span id="toastTxt"></span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
